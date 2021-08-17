@@ -502,7 +502,8 @@ def get_mathbert_sentence_embedding(data):
     embeddings = []
     #grab the sentence
     for s in range(len(data)):
-        if len(data[s]) > 512:
+        if len(data[s]) > 512:  #include in methods
+          print(data[s])
           data[s] = data[s][0:512]
         sentence_embed = get_embedding(mathbert_model, mathbert_tokenizer, data[s], word)
         embeddings.append(sentence_embed)
@@ -606,20 +607,20 @@ for test_fold in folds:
             list_of_embeddings = get_mathbert_sentence_embedding(sentences_text) #embedding (singular list)
             mod = SBERTCanberraScoringModel(problem_id,data,list_of_embeddings)
             print(Path.TRAINED_GRADING_MODELS)
-            pickle_save(mod, r'{}\{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id))
+            pickle_save(mod, '{}/{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id))
     #get the predictions for the test set
     for index, data_t in test.iterrows():
         did = data_t['id']
         problem_id = data_t['problem_id']
         answer_text = data_t['raw_answer_text']   #replace with cleaned_answer_text
 
-        print(answer_text, did, problem_id)
+        # print(answer_text, did, problem_id)
 
         if answer_text.strip() == "":
             grade = 0
         else:
             #grab the model file
-            model_file = r'{}\{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id)
+            model_file = '{}/{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id)
             grade = predict_grade(answer_text, problem_id, model_file, False)
 
         predicted_grade[did] = int(grade)
