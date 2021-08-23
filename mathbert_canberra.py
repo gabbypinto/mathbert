@@ -509,8 +509,8 @@ def get_mathbert_sentence_embedding(data):
         embeddings.append(sentence_embed)
     return embeddings
 def pickle_save(instance, fileName=None):
-    if filename is not None:
-        pickle.dump(instance, open(filename, "wb"), -1)
+    if fileName is not None:
+        pickle.dump(instance, open(fileName, "wb"), -1)
     else:
         return pickle.dumps(instance)
     # if fileName is not None:
