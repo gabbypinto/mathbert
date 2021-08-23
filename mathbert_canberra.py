@@ -10,6 +10,7 @@ import torch
 import tensorflow as tf
 import pandas as pd
 import compress_pickle
+import pickle
 from os.path import join, dirname, realpath
 mathbert_model = BertModel.from_pretrained("tbs17/MathBERT",output_hidden_states=True)
 mathbert_tokenizer = BertTokenizer.from_pretrained("tbs17/MathBERT")
