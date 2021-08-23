@@ -174,14 +174,14 @@ class Model:
 
     @staticmethod
     def pack(mod, filename=None):
-        return du.pickle_save(mod, filename)
+        return pickle_save(mod, filename)
 
     @staticmethod
     def unpack(obj):
         try:
             return du.pickle_load(obj)
         except (ValueError, AttributeError, TypeError):
-            return du.pickle_load_from_file(obj)
+            return pickle_load_from_file(obj)
 
     def load(self):
         return self
@@ -275,14 +275,14 @@ class SBERTCanberraScoringModel(Model):
 
     @staticmethod
     def pack(mod, filename=None):
-        return du.pickle_save(mod, filename)
+        return pickle_save(mod, filename)
 
     @staticmethod
     def unpack(obj):
         try:
             return du.pickle_load(obj)
         except (ValueError, AttributeError, TypeError):
-            return du.pickle_load_from_file(obj)
+            return pickle_load_from_file(obj)
 
     def train(self, data, headers):
         raise NotImplementedError()
@@ -509,10 +509,14 @@ def get_mathbert_sentence_embedding(data):
         embeddings.append(sentence_embed)
     return embeddings
 def pickle_save(instance, fileName=None):
-    if fileName is not None:
-        compress_pickle.dump(instance, open(fileName,"wb"),compression="lz4")
+    if filename is not None:
+        pickle.dump(instance, open(filename, "wb"), -1)
     else:
-        return compress_pickle.dumps(instance,compression="lz4")
+        return pickle.dumps(instance)
+    # if fileName is not None:
+    #     compress_pickle.dump(instance, open(fileName,"wb"),compression="lz4")
+    # else:
+    #     return compress_pickle.dumps(instance,compression="lz4")
 def getfilenames(directory='./', extension=None, exclude_directory=False):
     names = []
     directory = str(directory).replace('\\','/')
@@ -620,7 +624,7 @@ for test_fold in folds:
             grade = 0
         else:
             #grab the model file
-            model_file = '{}/{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id)
+            model_file = '{}/p{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id)
             grade = predict_grade(answer_text, problem_id, model_file, False)
 
         predicted_grade[did] = int(grade)
