@@ -495,8 +495,6 @@ def get_scored_responses_from_dataset(df,problem_id,train_folds):
                 data[df.columns[c]] = np.array(rows[:, c])
     return data
 def get_mathbert_sentence_embedding(data):
-    print("DATA...")
-    print(data)
     word = ''
     # print(data['raw_answer_text'])
     # sentences = data['raw_answer_text'].tolist()
@@ -506,18 +504,23 @@ def get_mathbert_sentence_embedding(data):
         if len(data[s]) > 512:  #include in methods
           print(data[s])
           data[s] = data[s][0:512]
-        sentence_embed = get_embedding(mathbert_model, mathbert_tokenizer, data[s], word)
-        embeddings.append(sentence_embed)
+        sentenceList = data[s].split()
+        listOfWordEmbeddings = []
+
+        for word in sentenceList: #loop through each word in the sentence
+            word_embed = get_embedding(mathbert_model, mathbert_tokenizer, data[s], word)
+            word_embed = np.array(word_embed)
+            listOfWordEmbeddings.append(word_embed)
+
+        sentence_embedding = sum(listOfWordEmbeddings).tolist()
+        embeddings.append(sentence_embedding)
     return embeddings
 def pickle_save(instance, fileName=None):
     if fileName is not None:
-        pickle.dump(instance, open(fileName, "wb"), -1)
+        compress_pickle.dump(instance, open(fileName,"wb"),compression="lz4")
     else:
-        return pickle.dumps(instance)
-    # if fileName is not None:
-    #     compress_pickle.dump(instance, open(fileName,"wb"),compression="lz4")
-    # else:
-    #     return compress_pickle.dumps(instance,compression="lz4")
+        return compress_pickle.dumps(instance,compression="lz4")
+
 def getfilenames(directory='./', extension=None, exclude_directory=False):
     names = []
     directory = str(directory).replace('\\','/')
@@ -609,7 +612,7 @@ for test_fold in folds:
 
         if len(data['raw_answer_text']) > 0:
             sentences_text = data['raw_answer_text'].tolist()
-            list_of_embeddings = get_mathbert_sentence_embedding(sentences_text) #embedding (singular list)
+            list_of_embeddings = get_mathbert_sentence_embedding(sentences_text) #embedding
             mod = SBERTCanberraScoringModel(problem_id,data,list_of_embeddings)
             print(Path.TRAINED_GRADING_MODELS)
             pickle_save(mod, '{}/{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id))
