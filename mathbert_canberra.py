@@ -10,7 +10,6 @@ import torch
 import tensorflow as tf
 import pandas as pd
 import compress_pickle
-import pickle
 from os.path import join, dirname, realpath
 mathbert_model = BertModel.from_pretrained("tbs17/MathBERT",output_hidden_states=True)
 mathbert_tokenizer = BertTokenizer.from_pretrained("tbs17/MathBERT")
@@ -175,14 +174,14 @@ class Model:
 
     @staticmethod
     def pack(mod, filename=None):
-        return pickle_save(mod, filename)
+        return du.pickle_save(mod, filename)
 
     @staticmethod
     def unpack(obj):
         try:
             return du.pickle_load(obj)
         except (ValueError, AttributeError, TypeError):
-            return pickle_load_from_file(obj)
+            return du.pickle_load_from_file(obj)
 
     def load(self):
         return self
@@ -276,14 +275,14 @@ class SBERTCanberraScoringModel(Model):
 
     @staticmethod
     def pack(mod, filename=None):
-        return pickle_save(mod, filename)
+        return du.pickle_save(mod, filename)
 
     @staticmethod
     def unpack(obj):
         try:
             return du.pickle_load(obj)
         except (ValueError, AttributeError, TypeError):
-            return pickle_load_from_file(obj)
+            return du.pickle_load_from_file(obj)
 
     def train(self, data, headers):
         raise NotImplementedError()
@@ -495,32 +494,24 @@ def get_scored_responses_from_dataset(df,problem_id,train_folds):
                 data[df.columns[c]] = np.array(rows[:, c])
     return data
 def get_mathbert_sentence_embedding(data):
+    print("DATA...")
+    print(data)
     word = ''
     # print(data['raw_answer_text'])
     # sentences = data['raw_answer_text'].tolist()
     embeddings = []
     #grab the sentence
     for s in range(len(data)):
-        if len(data[s]) > 512:  #include in methods
-          print(data[s])
+        if len(data[s]) > 512:
           data[s] = data[s][0:512]
-        sentenceList = data[s].split()
-        listOfWordEmbeddings = []
-
-        for word in sentenceList: #loop through each word in the sentence
-            word_embed = get_embedding(mathbert_model, mathbert_tokenizer, data[s], word)
-            word_embed = np.array(word_embed)
-            listOfWordEmbeddings.append(word_embed)
-
-        sentence_embedding = sum(listOfWordEmbeddings).tolist()
-        embeddings.append(sentence_embedding)
+        sentence_embed = get_embedding(mathbert_model, mathbert_tokenizer, data[s], word)
+        embeddings.append(sentence_embed)
     return embeddings
 def pickle_save(instance, fileName=None):
     if fileName is not None:
         compress_pickle.dump(instance, open(fileName,"wb"),compression="lz4")
     else:
         return compress_pickle.dumps(instance,compression="lz4")
-
 def getfilenames(directory='./', extension=None, exclude_directory=False):
     names = []
     directory = str(directory).replace('\\','/')
@@ -612,23 +603,26 @@ for test_fold in folds:
 
         if len(data['raw_answer_text']) > 0:
             sentences_text = data['raw_answer_text'].tolist()
-            list_of_embeddings = get_mathbert_sentence_embedding(sentences_text) #embedding
+            list_of_embeddings = get_mathbert_sentence_embedding(sentences_text) #embedding (singular list)
             mod = SBERTCanberraScoringModel(problem_id,data,list_of_embeddings)
             print(Path.TRAINED_GRADING_MODELS)
-            pickle_save(mod, '{}/{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id))
+            pickle_save(mod, r'{}\{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id))
+        count += 1
+        if count == 2:
+            break
     #get the predictions for the test set
     for index, data_t in test.iterrows():
         did = data_t['id']
         problem_id = data_t['problem_id']
         answer_text = data_t['raw_answer_text']   #replace with cleaned_answer_text
 
-        # print(answer_text, did, problem_id)
+        print(answer_text, did, problem_id)
 
         if answer_text.strip() == "":
             grade = 0
         else:
             #grab the model file
-            model_file = '{}/p{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id)
+            model_file = r'{}\{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id)
             grade = predict_grade(answer_text, problem_id, model_file, False)
 
         predicted_grade[did] = int(grade)
