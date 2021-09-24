@@ -218,16 +218,27 @@ class SBERTCanberraScoringModel(Model):
         self.stu_answers, unique_ind = np.unique(data['raw_answer_text'], True)
         # self.teacher_comments = data['teacher_comment'][unique_ind]
         print(self.stu_answers)
-
-        # print("data..")
-        # print(data)
+        print("data..")
+        print(data)
+        print()
+        print("scores")
+        print(data['score'])
+        print()
+        # print(data.loc[unique_ind])
+        self.answer_scores = data['score'][unique_ind]
+        # print("problem_id: ",self.problem_id)
+        # print("np array: ",unique_ind)
+        # print(unique_ind.tolist())
         # print()
         # print("scores")
         # print(data['score'])
         # print()
-        # print(data.loc[unique_ind])
-
-        self.answer_scores = data['score'][unique_ind]
+        # print(data['score'].tolist())
+        # self.answer_scores = []
+        # print(unique_ind.tolist())
+        # for num in unique_ind.tolist():
+        #     print("num: ",num)
+        #     self.answer_scores.append(data.loc[num])#DOESN'T WORK
 
         # ans_com_mapping = {}
         # for i in range(len(self.teacher_comments)):
@@ -236,12 +247,13 @@ class SBERTCanberraScoringModel(Model):
         #     except KeyError:
         #         ans_com_mapping[self.stu_answers[i]] = [self.teacher_comments[i]]
 
-        ans_grade_mapping = {}
+        ans_grade_mapping = {} #NEED THIS WORK
         for i, grade in enumerate(self.answer_scores):
             ans_grade_mapping[self.stu_answers[i]] = grade
 
         # self.ans_com_mapping = ans_com_mapping
         self.ans_grade_mapping = ans_grade_mapping
+
         self.stu_ans_embeddings = embeddingList
         self.embedder = None
 
@@ -482,8 +494,8 @@ def get_scored_responses_from_dataset(df,problem_id,train_folds):
                 data[df.columns[c]] = np.array(rows[:, c])
     return data
 def get_mathbert_sentence_embedding(data):
-    # print("in get_mathbert_sentence_embeddings function: DATA...")
-    # print(data)
+    print("DATA...")
+    print(data)
     word = ''
     # print(data['raw_answer_text'])
     # sentences = data['raw_answer_text'].tolist()
@@ -492,7 +504,6 @@ def get_mathbert_sentence_embedding(data):
     for s in range(len(data)):
         if len(data[s]) > 512:
           data[s] = data[s][0:512]
-        print("CUR SENTENCE: ",data[s])
         sentence_embed = get_embedding(mathbert_model, mathbert_tokenizer, data[s], word)
         embeddings.append(sentence_embed)
     return embeddings
@@ -548,18 +559,19 @@ def predict_grade(answer_text, problem_id,model_file=None, return_model_file=Fal
     special_case_scores = np.array([SPECIAL_CASE.score(ans) for ans in answers], dtype=np.float32)
 
     if model_file is None:
-        print("Model file is NONE. Problem ID: ",problem_id)
+        model_file = get_best_grading_model(problem_id)
 
     try:
         mod = pickle_load_from_file(join(dirname(realpath(__file__)), model_file)).load()
         if mod is None:
             raise TypeError('Model loading failed')
-
     except (TypeError, FileNotFoundError) as e:
-        print("NOT FOUND ERROR/TYPE ERROR")
+        print(e)
+        model_file = join(dirname(realpath(__file__)), default_grading_model_file)
+        mod = get_default_grading_model()
 
     prediction = np.argmax(np.array(mod.classify(answers, ['cleaned_answer_text'])).reshape((-1, 5)),
-                           axis=1).ravel() #go to mod.classify function!! -- error originates there
+                           axis=1).ravel() #stops here
 
     special_cases = np.argwhere(special_case_scores > -1).ravel()
     prediction[special_cases] = special_case_scores[special_cases]
@@ -595,20 +607,23 @@ for test_fold in folds:
             mod = SBERTCanberraScoringModel(problem_id,data,list_of_embeddings)
             print(Path.TRAINED_GRADING_MODELS)
             pickle_save(mod, r'{}\{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id))
+        count += 1
+        if count == 2:
+            break
     #get the predictions for the test set
     for index, data_t in test.iterrows():
         did = data_t['id']
         problem_id = data_t['problem_id']
         answer_text = data_t['raw_answer_text']   #replace with cleaned_answer_text
 
-        print(did, problem_id)
+        print(answer_text, did, problem_id)
 
         if answer_text.strip() == "":
             grade = 0
         else:
             #grab the model file
             model_file = r'{}\{}_{}.pkl'.format(Path.TRAINED_GRADING_MODELS, 'trained_BERT_canberra', problem_id)
-            grade = predict_grade(answer_text, problem_id, model_file, False) #ERROR HERE!!!!
+            grade = predict_grade(answer_text, problem_id, model_file, False)
 
         predicted_grade[did] = int(grade)
 
